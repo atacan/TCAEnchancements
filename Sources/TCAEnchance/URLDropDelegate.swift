@@ -70,6 +70,15 @@ struct URLDropDelegate: DropDelegate {
 ///         return .none
 /// // ...
 /// }
+///
+/// Scope(state: \.urlDrop, action: /Action.urlDrop) {
+///     URLDropReducer()
+/// }
+///
+/// // in view
+/// .overlay {
+///     URLDropView(store: store.scope(state: \.urlDrop, action: ContextDetailReducer.Action.urlDrop))
+/// }
 public struct URLDropReducer: Reducer {
     public init() {}
     
