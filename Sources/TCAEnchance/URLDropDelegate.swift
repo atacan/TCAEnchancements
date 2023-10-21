@@ -93,18 +93,18 @@ public struct URLDropReducer: Reducer {
 
 @available(iOS 15.0, *)
 @available(macOS 12.0, *)
-struct URLDropView: View {
+public struct URLDropView: View {
     let store: StoreOf<URLDropReducer>
     @ObservedObject var viewStore: ViewStoreOf<URLDropReducer>
 
     @State var phase: CGFloat = 0
 
-    init(store: StoreOf<URLDropReducer>) {
+    public init(store: StoreOf<URLDropReducer>) {
         self.store = store
         self.viewStore = ViewStore(store, observe: {$0})
     }
 
-    var body: some View {
+    public var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .stroke(
                 style: .init(
