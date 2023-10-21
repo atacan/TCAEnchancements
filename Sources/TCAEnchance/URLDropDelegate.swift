@@ -91,6 +91,7 @@ public struct URLDropReducer: Reducer {
     }
 }
 
+@available(iOS 15.0, *)
 @available(macOS 12.0, *)
 struct URLDropView: View {
     let store: StoreOf<URLDropReducer>
@@ -139,6 +140,7 @@ struct URLDropView: View {
 
 // preview
 #if DEBUG
+@available(iOS 15.0, *)
 @available(macOS 12.0, *)
 struct URLDropView_Previews: PreviewProvider {
     static var previews: some View {
