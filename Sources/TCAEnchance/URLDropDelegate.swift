@@ -43,6 +43,33 @@ struct URLDropDelegate: DropDelegate {
     }
 }
 
+/// Drop a text file and return its content
+///
+/// ```swift
+/// public struct State: Equatable {
+/// // ...
+///     var urlDrop: URLDropReducer.State
+/// // ...
+/// }
+///
+/// public enum Action: Equatable {
+/// // ...
+/// case urlDrop(URLDropReducer.Action)
+/// // ...
+/// }
+///
+///switch action {
+/// // ...
+///     case let .urlDrop(.droppedFileContent(content)):
+///         return .run {send in
+///             await send(.importResponse(TaskResult{
+///                  return try decoding(content)
+///             }))
+///         }
+///     case .urlDrop:
+///         return .none
+/// // ...
+/// }
 public struct URLDropReducer: Reducer {
     public init() {}
     
