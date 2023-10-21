@@ -44,6 +44,8 @@ struct URLDropDelegate: DropDelegate {
 }
 
 public struct URLDropReducer: Reducer {
+    public init() {}
+    
     public struct State: Equatable {
         @BindingState var isDropInProgress: Bool
         @BindingState var droppedUrls: [URL]
