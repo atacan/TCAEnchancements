@@ -1,11 +1,11 @@
 import XCTest
-@testable import TCAEnchance
+@testable import TCAEnhance
 
-final class TCAEnchanceTests: XCTestCase {
+final class TCAEnhanceTests: XCTestCase {
     func testExample() throws {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
-        XCTAssertEqual(TCAEnchance().text, "Hello, World!")
+        XCTAssertEqual(TCAEnhance().text, "Hello, World!")
     }
 }
