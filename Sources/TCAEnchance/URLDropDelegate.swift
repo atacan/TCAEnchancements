@@ -44,41 +44,52 @@ struct URLDropDelegate: DropDelegate {
     }
 }
 
-/// Drop a text file and return its content
+/// A view and reducer for handling file drops with customizable file types
 ///
 /// ```swift
 /// public struct State: Equatable {
-/// // ...
+///     // ...
 ///     var urlDrop: URLDropReducer.State
-/// // ...
+///     // ...
 /// }
 ///
 /// public enum Action: Equatable {
-/// // ...
-/// case urlDrop(URLDropReducer.Action)
-/// // ...
+///     // ...
+///     case urlDrop(URLDropReducer.Action)
+///     // ...
 /// }
 ///
-///switch action {
-/// // ...
-///     case let .urlDrop(.droppedFileContent(content)):
-///         return .run {send in
-///             await send(.importResponse(TaskResult{
-///                  return try decoding(content)
-///             }))
+/// switch action {
+///     // ...
+///     case let .urlDrop(.droppedFiles(urls)):
+///         return .run { send in
+///             // Handle the dropped files however you need
+///             for url in urls {
+///                 // Process files based on their types
+///                 if url.pathExtension == "mp3" {
+///                     try await processAudioFile(url)
+///                 } else if url.pathExtension == "jpg" {
+///                     try await processImageFile(url)
+///                 }
+///             }
+///             await send(.filesProcessed)
 ///         }
 ///     case .urlDrop:
 ///         return .none
-/// // ...
+///     // ...
 /// }
 ///
+/// // In reducer
 /// Scope(state: \.urlDrop, action: /Action.urlDrop) {
 ///     URLDropReducer()
 /// }
 ///
-/// // in view
+/// // In view
 /// .overlay {
-///     URLDropView(store: store.scope(state: \.urlDrop, action: ContextDetailReducer.Action.urlDrop))
+///     URLDropView(
+///         store: store.scope(state: \.urlDrop, action: Action.urlDrop),
+///         acceptedTypes: [.audio, .image] // Specify the file types you want to accept
+///     )
 /// }
 @Reducer
 public struct URLDropReducer {
