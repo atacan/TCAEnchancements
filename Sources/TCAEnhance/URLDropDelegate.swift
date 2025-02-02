@@ -19,13 +19,23 @@ struct URLDropDelegate: DropDelegate {
         isDropInProgress = true
         actionDropEntered()
     }
-
+    
     func performDrop(info: DropInfo) -> Bool {
         var isSuccessful = true
         for itemProvider in info.itemProviders(for: acceptedTypes) {
             for type in acceptedTypes {
                 itemProvider.loadItem(forTypeIdentifier: type.identifier, options: nil) { item, error in
                     if let url = item as? URL {
+                        DispatchQueue.main.async {
+                            urls.append(url)
+                        }
+                    } else if let urlString = item as? String,
+                              let url = URL(string: urlString) {
+                        DispatchQueue.main.async {
+                            urls.append(url)
+                        }
+                    } else if let data = item as? Data,
+                              let url = URL(dataRepresentation: data, relativeTo: nil) {
                         DispatchQueue.main.async {
                             urls.append(url)
                         }
