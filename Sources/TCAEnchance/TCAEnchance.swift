@@ -53,7 +53,7 @@ struct ChangeReducer<Base: Reducer, ChildState: Equatable>: Reducer {
 }
 
 
-public struct TCAEnchance {
+public struct TCAEnhance {
     public private(set) var text = "Hello, World!"
 
     public init() {
