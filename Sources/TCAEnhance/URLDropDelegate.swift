@@ -20,7 +20,7 @@ struct URLDropDelegate: DropDelegate {
     }
 
     func performDrop(info: DropInfo) -> Bool {
-        var noProblem = true
+        var isSuccessful = true
         for itemProvider in info.itemProviders(for: acceptedTypes) {
             for type in acceptedTypes {
                 itemProvider.loadItem(forTypeIdentifier: type.identifier, options: nil) { item, error in
@@ -30,12 +30,12 @@ struct URLDropDelegate: DropDelegate {
                             urls.append(url)
                         }
                     } else {
-                        noProblem = false
+                        isSuccessful = false
                     }
                 }
             }
         }
-        return noProblem
+        return isSuccessful
     }
 
     func dropExited(info: DropInfo) {
@@ -192,7 +192,10 @@ public struct URLDropView: View {
 struct URLDropView_Previews: PreviewProvider {
     static var previews: some View {
         URLDropView(
-            store: Store(initialState: .init(isDropInProgress: true), reducer: {URLDropReducer()}),
+            store: Store(initialState: .init(isDropInProgress: true), reducer: {
+                URLDropReducer()
+                    ._printChanges()
+            }),
             acceptedTypes: [.audio, .image]
         )
         .padding()
