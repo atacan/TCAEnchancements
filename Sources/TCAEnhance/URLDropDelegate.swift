@@ -1,4 +1,5 @@
 #if canImport(SwiftUI)
+import Foundation
 import ComposableArchitecture
 import SwiftUI
 import UniformTypeIdentifiers
@@ -24,8 +25,7 @@ struct URLDropDelegate: DropDelegate {
         for itemProvider in info.itemProviders(for: acceptedTypes) {
             for type in acceptedTypes {
                 itemProvider.loadItem(forTypeIdentifier: type.identifier, options: nil) { item, error in
-                    if let data = item as? Data,
-                       let url = URL(dataRepresentation: data, relativeTo: nil) {
+                    if let url = item as? URL {
                         DispatchQueue.main.async {
                             urls.append(url)
                         }
