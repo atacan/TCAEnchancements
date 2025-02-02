@@ -8,11 +8,10 @@ struct URLDropDelegate: DropDelegate {
     @Binding var isDropInProgress: Bool
     var actionDropEntered: () -> Void
     var actionDropExited: () -> Void
-
-    let acceptedType = UTType.fileURL
+    var acceptedTypes: [UTType]
 
     func validateDrop(info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [acceptedType])
+        info.hasItemsConforming(to: acceptedTypes)
     }
 
     func dropEntered(info: DropInfo) {
@@ -22,15 +21,17 @@ struct URLDropDelegate: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         var noProblem = true
-        for itemProvider in info.itemProviders(for: [acceptedType]) {
-            itemProvider.loadItem(forTypeIdentifier: acceptedType.identifier, options: nil) { item, error in
-                if let data = item as? Data,
-                   let url = URL(dataRepresentation: data, relativeTo: nil) {
-                    DispatchQueue.main.async {
-                        urls.append(url)
+        for itemProvider in info.itemProviders(for: acceptedTypes) {
+            for type in acceptedTypes {
+                itemProvider.loadItem(forTypeIdentifier: type.identifier, options: nil) { item, error in
+                    if let data = item as? Data,
+                       let url = URL(dataRepresentation: data, relativeTo: nil) {
+                        DispatchQueue.main.async {
+                            urls.append(url)
+                        }
+                    } else {
+                        noProblem = false
                     }
-                } else {
-                    noProblem = false
                 }
             }
         }
@@ -79,17 +80,17 @@ struct URLDropDelegate: DropDelegate {
 /// .overlay {
 ///     URLDropView(store: store.scope(state: \.urlDrop, action: ContextDetailReducer.Action.urlDrop))
 /// }
-public struct URLDropReducer: Reducer {
+@Reducer
+public struct URLDropReducer {
     public init() {}
     
+    @ObservableState
     public struct State: Equatable {
-        @BindingState var isDropInProgress: Bool
-        @BindingState var droppedUrls: [URL]
-        var droppedText: String
+        var isDropInProgress: Bool
+        var droppedUrls: [URL]
 
-        public init(droppedUrls: [URL] = [], droppedText: String = "", isDropInProgress: Bool = false) {
+        public init(droppedUrls: [URL] = [], isDropInProgress: Bool = false) {
             self.droppedUrls = droppedUrls
-            self.droppedText = droppedText
             self.isDropInProgress = isDropInProgress
         }
     }
@@ -98,7 +99,7 @@ public struct URLDropReducer: Reducer {
         case binding(BindingAction<State>)
         case dropEntered
         case dropExited
-        case droppedFileContent(String)
+        case droppedFiles([URL])
     }
 
     public var body: some Reducer<State, Action> {
@@ -113,15 +114,8 @@ public struct URLDropReducer: Reducer {
                 guard !state.droppedUrls.isEmpty else {
                     return .none
                 }
-                return .run { [droppedUrls = state.droppedUrls] send in
-                    let text =
-                        try droppedUrls.map {
-                            try String(contentsOf: $0)
-                        }
-                        .joined(separator: "\n")
-                    await send(.droppedFileContent(text))
-                }
-            case .droppedFileContent:
+                return .send(.droppedFiles(state.droppedUrls))
+            case .droppedFiles:
                 state.droppedUrls = []
                 return .none
             }
@@ -132,14 +126,15 @@ public struct URLDropReducer: Reducer {
 @available(iOS 15.0, *)
 @available(macOS 12.0, *)
 public struct URLDropView: View {
-    let store: StoreOf<URLDropReducer>
-    @ObservedObject var viewStore: ViewStoreOf<URLDropReducer>
+    @ComposableArchitecture.Bindable var store: StoreOf<URLDropReducer>
+
+    let acceptedTypes: [UTType]
 
     @State var phase: CGFloat = 0
 
-    public init(store: StoreOf<URLDropReducer>) {
+    public init(store: StoreOf<URLDropReducer>, acceptedTypes: [UTType]) {
         self.store = store
-        self.viewStore = ViewStore(store, observe: {$0})
+        self.acceptedTypes = acceptedTypes
     }
 
     public var body: some View {
@@ -155,7 +150,7 @@ public struct URLDropView: View {
                 )
             )
             .padding(4)
-            .foregroundStyle(viewStore.isDropInProgress ? Color.accentColor : Color.clear)
+            .foregroundStyle(store.isDropInProgress ? Color.accentColor : Color.clear)
             .animation(
                 Animation.linear(duration: 2)
                     .repeatForever(autoreverses: false),
@@ -165,12 +160,13 @@ public struct URLDropView: View {
                 phase = 20
             }
             .onDrop(
-                of: [UTType.text],
+                of: acceptedTypes,
                 delegate: URLDropDelegate(
-                    urls: viewStore.$droppedUrls,
-                    isDropInProgress: viewStore.$isDropInProgress,
-                    actionDropEntered: { viewStore.send(.dropEntered) },
-                    actionDropExited: { viewStore.send(.dropExited) }
+                    urls: $store.droppedUrls,
+                    isDropInProgress: $store.isDropInProgress,
+                    actionDropEntered: { store.send(.dropEntered) },
+                    actionDropExited: { store.send(.dropExited) },
+                    acceptedTypes: acceptedTypes
                 )
             )
     }
@@ -183,7 +179,8 @@ public struct URLDropView: View {
 struct URLDropView_Previews: PreviewProvider {
     static var previews: some View {
         URLDropView(
-            store: Store(initialState: .init(isDropInProgress: true), reducer: {URLDropReducer()})
+            store: Store(initialState: .init(isDropInProgress: true), reducer: {URLDropReducer()}),
+            acceptedTypes: [.audio, .image]
         )
         .padding()
     }
