@@ -80,7 +80,7 @@ struct URLDropDelegate: DropDelegate {
 /// }
 ///
 /// // In reducer
-/// Scope(state: \.urlDrop, action: /Action.urlDrop) {
+/// Scope(state: \.urlDrop, action: \.urlDrop) {
 ///     URLDropReducer()
 /// }
 ///
@@ -149,37 +149,39 @@ public struct URLDropView: View {
     }
 
     public var body: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .stroke(
-                style: .init(
-                    lineWidth: 4,
-                    lineCap: .round,
-                    lineJoin: .round,
-                    miterLimit: 1,
-                    dash: [10],
-                    dashPhase: phase
+        WithPerceptionTracking {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(
+                    style: .init(
+                        lineWidth: 4,
+                        lineCap: .round,
+                        lineJoin: .round,
+                        miterLimit: 1,
+                        dash: [10],
+                        dashPhase: phase
+                    )
                 )
-            )
-            .padding(4)
-            .foregroundStyle(store.isDropInProgress ? Color.accentColor : Color.clear)
-            .animation(
-                Animation.linear(duration: 2)
-                    .repeatForever(autoreverses: false),
-                value: phase
-            )
-            .onAppear {
-                phase = 20
-            }
-            .onDrop(
-                of: acceptedTypes,
-                delegate: URLDropDelegate(
-                    urls: $store.droppedUrls,
-                    isDropInProgress: $store.isDropInProgress,
-                    actionDropEntered: { store.send(.dropEntered) },
-                    actionDropExited: { store.send(.dropExited) },
-                    acceptedTypes: acceptedTypes
+                .padding(4)
+                .foregroundStyle(store.isDropInProgress ? Color.accentColor : Color.clear)
+                .animation(
+                    Animation.linear(duration: 2)
+                        .repeatForever(autoreverses: false),
+                    value: phase
                 )
-            )
+                .onAppear {
+                    phase = 20
+                }
+                .onDrop(
+                    of: acceptedTypes,
+                    delegate: URLDropDelegate(
+                        urls: $store.droppedUrls,
+                        isDropInProgress: $store.isDropInProgress,
+                        actionDropEntered: { store.send(.dropEntered) },
+                        actionDropExited: { store.send(.dropExited) },
+                        acceptedTypes: acceptedTypes
+                    )
+                )
+        }
     }
 }
 
