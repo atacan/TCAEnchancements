@@ -5,10 +5,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct URLDropDelegate: DropDelegate {
-    @Binding var urls: [URL]
     @Binding var isDropInProgress: Bool
     var actionDropEntered: () -> Void
     var actionDropExited: () -> Void
+    var actionDroppedFiles: ([URL]) -> Void
     var acceptedTypes: [UTType]
 
     func validateDrop(info: DropInfo) -> Bool {
@@ -21,31 +21,43 @@ struct URLDropDelegate: DropDelegate {
     }
     
     func performDrop(info: DropInfo) -> Bool {
-        var isSuccessful = true
+        let group = DispatchGroup()
+        var loadedUrls: [URL] = []
+        let urlsLock = NSLock()
+
         for itemProvider in info.itemProviders(for: acceptedTypes) {
             for type in acceptedTypes {
+                group.enter()
                 itemProvider.loadItem(forTypeIdentifier: type.identifier, options: nil) { item, error in
+                    defer { group.leave() }
+
                     if let url = item as? URL {
-                        DispatchQueue.main.async {
-                            urls.append(url)
-                        }
+                        urlsLock.lock()
+                        loadedUrls.append(url)
+                        urlsLock.unlock()
                     } else if let urlString = item as? String,
                               let url = URL(string: urlString) {
-                        DispatchQueue.main.async {
-                            urls.append(url)
-                        }
+                        urlsLock.lock()
+                        loadedUrls.append(url)
+                        urlsLock.unlock()
                     } else if let data = item as? Data,
                               let url = URL(dataRepresentation: data, relativeTo: nil) {
-                        DispatchQueue.main.async {
-                            urls.append(url)
-                        }
-                    } else {
-                        isSuccessful = false
+                        urlsLock.lock()
+                        loadedUrls.append(url)
+                        urlsLock.unlock()
                     }
                 }
             }
         }
-        return isSuccessful
+
+        group.notify(queue: .main) { [self] in
+            isDropInProgress = false
+            if !loadedUrls.isEmpty {
+                actionDroppedFiles(loadedUrls)
+            }
+        }
+
+        return true
     }
 
     func dropExited(info: DropInfo) {
@@ -108,10 +120,8 @@ public struct URLDropReducer {
     @ObservableState
     public struct State: Equatable {
         var isDropInProgress: Bool
-        var droppedUrls: [URL]
 
-        public init(droppedUrls: [URL] = [], isDropInProgress: Bool = false) {
-            self.droppedUrls = droppedUrls
+        public init(isDropInProgress: Bool = false) {
             self.isDropInProgress = isDropInProgress
         }
     }
@@ -132,12 +142,8 @@ public struct URLDropReducer {
             case .dropEntered:
                 return .none
             case .dropExited:
-                guard !state.droppedUrls.isEmpty else {
-                    return .none
-                }
-                return .send(.droppedFiles(state.droppedUrls))
+                return .none
             case .droppedFiles:
-                state.droppedUrls = []
                 return .none
             }
         }
@@ -184,10 +190,10 @@ public struct URLDropView: View {
                 .onDrop(
                     of: acceptedTypes,
                     delegate: URLDropDelegate(
-                        urls: $store.droppedUrls,
                         isDropInProgress: $store.isDropInProgress,
                         actionDropEntered: { store.send(.dropEntered) },
                         actionDropExited: { store.send(.dropExited) },
+                        actionDroppedFiles: { urls in store.send(.droppedFiles(urls)) },
                         acceptedTypes: acceptedTypes
                     )
                 )
@@ -202,7 +208,7 @@ public struct URLDropView: View {
 struct URLDropView_Previews: PreviewProvider {
     static var previews: some View {
         URLDropView(
-            store: Store(initialState: .init(isDropInProgress: true), reducer: {
+            store: Store(initialState: .init(), reducer: {
                 URLDropReducer()
                     ._printChanges()
             }),
